@@ -1,0 +1,43 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+on:
+  push:
+    tags:        
+      - v**
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v3
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - run: npm update -g npm@latest
+      - run: npm install
+      - run: npm run package
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          directory: out
+          path: simgui-win32-x64
+          type: 'zip'
+          filename: 'simgui-win32-x64.zip'
+      - name: Upload Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "out/simgui-win32-x64.zip"
+          token: ${{ secrets.GH_TOKEN }}
