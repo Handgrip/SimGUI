@@ -117,11 +117,14 @@ function diff() {
     const tr = $(event.currentTarget);
     const fileAName = tr.find("th")[0].innerHTML;
     const fileBName = tr.find("th")[1].innerHTML;
+    const percentage = tr.find("th")[2].innerHTML;
     const fileAPath = path.join(dir, fileAName);
     const fileBPath = path.join(dir, fileBName);
     const fileA = fs.readFileSync(fileAPath).toString("utf-8");
     const fileB = fs.readFileSync(fileBPath).toString("utf-8");
-    $("#diffModalLabel").text(`${fileAName} <===> ${fileBName}`);
+    $("#diffModalLabel").text(
+        `${fileAName} <===> ${fileBName} Similarity: ${percentage}%`
+    );
     window.editor.setModel({
         original: monaco.editor.createModel(fileA, language),
         modified: monaco.editor.createModel(fileB, language),
