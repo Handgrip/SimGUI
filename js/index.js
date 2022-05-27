@@ -2,8 +2,9 @@ const { dialog } = require("electron").remote;
 const fs = require("fs");
 const path = require("path");
 const child_process = require("child_process");
-const stream = require("stream");
 const os = require("os");
+const process = require("process");
+const configPath = path.join(process.cwd(), "config.json");
 
 const valueToLanguage = [
     "8086",
@@ -22,7 +23,7 @@ const valueToMonacoLanguage = [
     "cpp",
     "java",
     "plaintext",
-    "plaintext",
+    "m3",
     "plaintext",
     "pascal",
     "plaintext",
@@ -83,6 +84,10 @@ async function processSIM() {
     const err = ret.stderr.toString("utf-8");
     $("#sim-stdout").text(out);
     $("#sim-stderr").text(err);
+}
+
+function processResultFilter() {
+    const out = $("#sim-stdout").text();
     const resArr = out.split("\n");
     let startIndex = resArr.indexOf("\r") + 1;
     let tableData = [];
@@ -103,9 +108,7 @@ async function processSIM() {
     tableData.forEach((v) => {
         tableBody.append(
             $(
-                `<tr onclick="diff()"><th>${v.fileAName}</th><th>${
-                    v.fileBName
-                }</th><th>${v.similarPercentage.toString()}</th></tr>`
+                `<tr onclick="diff()"><th>${v.fileAName}</th><th>${v.fileBName}</th><th>${v.similarPercentage}</th></tr>`
             )
         );
     });
@@ -130,6 +133,40 @@ function diff() {
         modified: monaco.editor.createModel(fileB, language),
     });
     $("#diffModal").modal();
+}
+
+function loadConfig() {
+    const config = JSON.parse(fs.readFileSync(configPath));
+    $("#directory-input").val(config.directory ?? "");
+    $("#input-file-fliter").val(config.fileFilter ?? "");
+    $("#language-select").val(config.language ?? "");
+    $("#threshold").val(config.threshold ?? "");
+    $("#result-fliter").val(config.resultFilter ?? "");
+}
+
+function saveConfig(config) {
+    fs.writeFileSync(
+        configPath,
+        JSON.stringify(
+            config ?? {
+                directory: $("#directory-input").val(),
+                fileFilter: $("#input-file-fliter").val(),
+                language: $("#language-select").val(),
+                threshold: $("#threshold").val(),
+                resultFilter: $("#result-fliter").val(),
+            }
+        )
+    );
+}
+function resetConfig() {
+    saveConfig({
+        directory: os.homedir(),
+        fileFilter: "(filename) => true",
+        language: "2",
+        threshold: 75,
+        resultFilter: `(fileAName, fileBName, percentage) => {\n    const A = fileAName.split("-");\n    const B = fileBName.split("-");\n    return A[0] != B[0] && A[1] == B[1];\n};`,
+    });
+    loadConfig();
 }
 
 (function () {
@@ -158,4 +195,13 @@ function diff() {
             { readOnly: true, automaticLayout: true }
         );
     });
+})();
+
+(function () {
+    if (!fs.existsSync(configPath)) {
+        resetConfig();
+    } else {
+        loadConfig();
+    }
+    window.onbeforeunload = () => saveConfig();
 })();
